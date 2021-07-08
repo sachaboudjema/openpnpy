@@ -5,8 +5,8 @@ from copy import deepcopy
 
 class PnpServer:
 
-    def __init__(self, name='OpenPnP Server'):
-        self.app = Flask(name)
+    def __init__(self, *args, **kwargs):
+        self.app = Flask(*args, **kwargs)
         self.app.add_url_rule('/pnp/HELLO', 'hello', self.handle_hello)
         self.app.add_url_rule(
             '/pnp/WORK-REQUEST', 'work_request',
