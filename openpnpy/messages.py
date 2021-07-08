@@ -2,7 +2,7 @@ from xml.etree import ElementTree
 from contextlib import contextmanager
 
 
-__all__ = ['backoff', 'device_info']
+__all__ = ['backoff', 'device_info', 'config_upgrade']
 
 
 class ContextualTreeBuilder(ElementTree.TreeBuilder):
