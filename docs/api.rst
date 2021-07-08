@@ -1,5 +1,8 @@
-API
-===
+API Reference
+=============
+
+.. autosummary::
+   :toctree: _autosummary
 
 openpnpy.messages module
 ------------------------
