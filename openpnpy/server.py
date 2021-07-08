@@ -7,9 +7,8 @@ class PnpServer:
     """Wrapper for a Flask server implementing PnP protocol endpoints.
     This class should be derived and handler methods overloaded in to implement
     behavior.
-
-    See https://flask.palletsprojects.com/en/2.0.x/api/#application-object
-        for supported constructor params
+    See https://flask.palletsprojects.com/en/2.0.x/api/#application-object 
+    for supported constructor params
     """
     def __init__(self, *args, **kwargs):
         self.app = Flask(*args, **kwargs)
@@ -27,9 +26,8 @@ class PnpServer:
 
     def run(self, *args, **kwargs):
         """Runs the Flask development server.
-
         See https://flask.palletsprojects.com/en/2.0.x/api/#flask.Flask.run
-            for supported params
+        for supported params
         """
         self.app.run(*args, **kwargs)
 
