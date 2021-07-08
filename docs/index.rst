@@ -10,8 +10,11 @@ A very basic server implementation could look like this:
 .. literalinclude:: example_server.py
    :language: python
 
-Which could then be run like so: ::
-python myserver.py
+Which could then be run like so:
+
+.. code-block:: shell
+
+   python3 myserver.py
 
 
 .. toctree::

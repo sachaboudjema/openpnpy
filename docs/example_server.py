@@ -1,3 +1,7 @@
+# myserver.py
+
+#!/usr/bin/env python3
+
 from openpnpy.server import PnpServer
 from openpnpy.messages import device_info, backoff
 
