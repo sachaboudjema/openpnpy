@@ -1,9 +1,6 @@
 API Reference
 =============
 
-.. autosummary::
-   :toctree: stubs
-
 openpnpy.messages module
 ------------------------
 
