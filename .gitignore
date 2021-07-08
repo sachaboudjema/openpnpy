@@ -1,3 +1,9 @@
+# vscode
+.vscode
+
+# sphinx build folder
+_build
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
