@@ -101,6 +101,13 @@ class PnpMessage:
     def correlator(self):
         return self.body.get('correlator')
 
+    @property
+    def success(self):
+        s = self.body.get('success')
+        if s is not None:
+            return bool(int(s))
+        return s
+
     def to_string(self):
         return ElementTree.tostring(self.root)
 
