@@ -23,13 +23,13 @@ class PnpServer:
         self.app.run(*args, **kwargs)
 
     def handle_hello(self):
-        '''Defines what to do when a Pnp Agent calls in to the server.
+        '''What to do when a Pnp Agent calls in to the server.
         Returns an empty http 200 by default.
         '''
         return Response(status=200, headers={})
 
     def handle_work_request(self, work_request):
-        '''Defines what to do when a PnP agent sends a work request.
+        '''What to do when a PnP agent sends a work request.
         The request passed as argument is of type PnpMessage.
         Should return a PnP message built using openpnpy.messages functions.
         Not implemented by default.
@@ -37,7 +37,7 @@ class PnpServer:
         raise NotImplementedError
 
     def handle_work_response(self, work_response):
-        '''Defines what to do when a PnP agent sends a work response.
+        '''What to do when a PnP agent sends a work response.
         The response passed as argument is of type PnpMessage.
         Should return a PnP message built using openpnpy.messages functions.
         Not implemented by default.
@@ -60,9 +60,10 @@ class PnpMessage:
         return cls(ElementTree.fromstring(xmlstring))
 
     def make_response(self, element):
-        '''Builds a new PnpMessage from this one, replacing the body with given element.
-        The element shoudl be built using openpnpy.messages functions.
-        This allowes to preserve session related atrtibuts, such as udi and correlator.
+        '''Builds a response to this message.
+        Original message is copied and body is replaced by given element.This 
+        allows to preserve session related attributes, such as udi and correlator.
+        Element should be built using openpnpy.messages functions.
         '''
         response = deepcopy(self)
         response.body = element
@@ -70,10 +71,20 @@ class PnpMessage:
 
     @property
     def udi(self):
+        '''Unique Device Identifier. 
+        A built in device id consisting of product id, version id, and the serial
+        number. It is mandatory for all the messages that get exchanged between 
+        the PnP agent and the PnP server.
+        '''
         return self.root.get('udi')
 
     @property
     def username(self):
+        '''Login username for the device.
+        Applicable for all the messages that are sent from the PnP server to the 
+        agent. The only exception is the initial exchange when there is no configuration 
+        present on the new device.
+        '''
         self.root.get('username')
 
     @username.setter
@@ -86,10 +97,18 @@ class PnpMessage:
 
     @password.setter
     def password(self, value):
+        '''Login password for the device.
+        Applicable for all the messages that are sent from the PnP server to the 
+        agent. The only exception is the initial exchange when there is no configuration 
+        present on the new device.
+        '''
         self.root.set('password', value)
 
     @property
     def body(self):
+        '''Body of the PnP message.
+        Can be one of info or request or response messages for various PnP services.
+        '''
         return self.root[0]
 
     @body.setter
@@ -99,10 +118,14 @@ class PnpMessage:
 
     @property
     def correlator(self):
+        '''A unique string to match requests and responses between agent and server.'''
         return self.body.get('correlator')
 
     @property
     def success(self):
+        '''Success state of the last executed work request.
+        None if the message is a work request.
+        '''
         s = self.body.get('success')
         if s is not None:
             return bool(int(s))
