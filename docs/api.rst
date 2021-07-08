@@ -1,8 +1,5 @@
-openpnpy package
-================
-
-Submodules
-----------
+API
+===
 
 openpnpy.messages module
 ------------------------
@@ -16,14 +13,6 @@ openpnpy.server module
 ----------------------
 
 .. automodule:: openpnpy.server
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: openpnpy
    :members:
    :undoc-members:
    :show-inheritance:
