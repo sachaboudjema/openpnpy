@@ -5,6 +5,15 @@ OpenPnPy is a python package implementing the Cisco Network PnP protocol.
 It provides a server class to establish communication with PnP agents, as well as
 utility functions to easily build PnP XML service messages.
 
+A very basic server implementation could look like this:
+
+.. literalinclude:: example_server.py
+   :language: python
+
+Which could then be run like so: ::
+python myserver.py
+
+
 .. toctree::
    :hidden:
    :maxdepth: 4
