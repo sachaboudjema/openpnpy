@@ -183,18 +183,25 @@ class PnpMessage:
 
 
 class PnpResponse:
-    """When called, and instance of this class will create a PnpMessage from 
-    Flask's global request object and make a response PnpMessage with the message 
-    body returned by the handler function assigned to it.
+    """Decorator to create responses to the PnP request currently held by Flask's
+    global request object.
 
-    :param handler: handler function returning a PnP message body, as can be 
-        built using then :py:mod:`openpnpy.messages` module
+    :param handler: function returning a PnP message body, as can be built using 
+    the :py:mod:`openpnpy.messages` module
     :type handler: callable
     """
     def __init__(self, handler):
         self.handler = handler
 
     def __call__(self, *args):
+        """Gets the reponse message body by calling the handler function and 
+        creates a proper PnP XML message with udi and correlaotr mathcing the PnP
+        request.
+
+        :return: HTTP response tuple composed of the PnP reponse message and 200
+            status code
+        :rtype: tuple
+        """
         agent_request = PnpMessage.from_string(request.get_data())
         server_response = agent_request.make_response(self.handler(agent_request))
         return server_response.to_string(), 200
