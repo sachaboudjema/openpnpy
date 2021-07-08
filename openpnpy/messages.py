@@ -39,3 +39,14 @@ def device_info(type='all'):
             pass
     return ctb.close()
 
+
+def bye():
+    '''Acknowledge the receipt of PnP response and signal the end of the transaction.
+    This is applicable only when the transport protocol is HTTP and HTTPS.
+    '''
+    ctb = ContextualTreeBuilder()
+    with ctb.start('{urn:cisco:pnp:work-info}info'):
+        with ctb.start('workInfo'):
+            with ctb.start('bye'):
+                pass
+    return ctb.close()
