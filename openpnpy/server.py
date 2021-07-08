@@ -1,14 +1,20 @@
+"""This module provides a base server class to be derived and implemented 
+according to the user's needs.
+"""
 from flask import Flask, Response, request
 from xml.etree import ElementTree
 from copy import deepcopy
 
 
+__all__ = ['PnpServer']
+
+
 class PnpServer:
-    """Wrapper for a Flask server implementing PnP protocol endpoints.
-    This class should be derived and handler methods overloaded in to implement
+    """Wrapped Flask web server implementing PnP protocol endpoints.
+    This class should be derived and the handler methods overloaded to implement
     behavior.
     See https://flask.palletsprojects.com/en/2.0.x/api/#application-object 
-    for supported constructor params
+    for supported constructor params.
     """
     def __init__(self, *args, **kwargs):
         self.app = Flask(*args, **kwargs)
@@ -67,7 +73,7 @@ class PnpServer:
 
 
 class PnpMessage:
-    """PnP XML message
+    """PnP protocol XML message
 
     :param element: XML parsed message element 
     :type element: xml.etree.ElementTree.Element
@@ -177,7 +183,14 @@ class PnpMessage:
 
 
 class PnpResponse:
+    """When called, and instance of this class will create a PnpMessage from 
+    Flask's global request object and make a response PnpMessage with the message 
+    body returned by the handler function assigned to it.
 
+    :param handler: handler function returning a PnP message body, as can be 
+        built using then :py:mod:`openpnpy.messages` module
+    :type handler: callable
+    """
     def __init__(self, handler):
         self.handler = handler
 
