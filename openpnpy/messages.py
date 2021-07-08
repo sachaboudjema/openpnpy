@@ -38,8 +38,8 @@ def backoff(seconds=0, reason='No Reason'):
 
 
 def device_info(type='all'):
-    """Request to retrieve device information from PnP agent.
-    Type can take the following values: .
+    """Request to obtain device’s profile which includes device UDI, filesytem, 
+    hardware info and etc.
 
     :param type: Info sections to be sent, can be 'image', 'hardware', 'filesystem', 
         'udi', 'profile' or 'all', defaults to 'all'
@@ -135,3 +135,109 @@ def bye():
             with ctb.start('bye'):
                 pass
     return ctb.close()
+
+
+def capability():
+    """Request to query what services are supported by the agent.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def certificate_install():
+    """Request the agent to install a trustpoint or trustpool certificate into 
+    the devices.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def cli_config():
+    """Request to execute a configuration CLI.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def cli_exec():
+    """Request to execute a exec level CLI.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def device_authentication():
+    """Request to authenticate the device.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def file_transfer():
+    """Request to copy a file.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def image_install():
+    """Request the agent to install a new image.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def licensing():
+    """Request to install and configure new license.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def redirection():
+    """Request to redirect PnP Profile to use another PnP server.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def reload():
+    """Request the agent to reload.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def script():
+    """Request to execute a script.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def smu():
+    """Request to install a SMU.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
+
+def topology():
+    """Request topology of the device.
+    
+    :raises NotImplementedError: Yet to be implemented
+    """
+    raise NotImplementedError
+
