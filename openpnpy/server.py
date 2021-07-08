@@ -1,4 +1,3 @@
-import re
 from flask import Flask, Response, request
 from xml.etree import ElementTree
 from copy import deepcopy
