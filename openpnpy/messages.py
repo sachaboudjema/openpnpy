@@ -1,5 +1,3 @@
-import re
-from copy import deepcopy
 from xml.etree import ElementTree
 from contextlib import contextmanager
 
