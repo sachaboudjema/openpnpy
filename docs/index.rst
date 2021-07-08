@@ -19,7 +19,7 @@ A PnP server with custom behavior can be defined by subclassing the
 :py:class:`openpnpy.server.PnpServer` class, and implementing the handler methods.
 
 Service messages to be returned by the handler methods can be built using functions 
-provided by the :py:mod`openpnpy.messages` module.
+provided by the :py:mod:`openpnpy.messages` module.
 
 A very basic server implementation could look like this:
 
