@@ -10,11 +10,13 @@ class PnpServer:
         self.app.add_url_rule('/pnp/HELLO', 'hello', self.handle_hello)
         self.app.add_url_rule(
             '/pnp/WORK-REQUEST', 'work_request',
-            PnpResponse(self.handle_work_request)
+            PnpResponse(self.handle_work_request),
+            methods=['POST']
         )
         self.app.add_url_rule(
             '/pnp/WORK-RESPONSE', 'work_response',
-            PnpResponse(self.handle_work_response)
+            PnpResponse(self.handle_work_response),
+            methods=['POST']
         )
 
     def run(self, *args, **kwargs):
