@@ -2,7 +2,7 @@ API Reference
 =============
 
 .. autosummary::
-   :toctree: _autosummary
+   :toctree: stubs
 
 openpnpy.messages module
 ------------------------
