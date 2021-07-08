@@ -10,7 +10,7 @@ A very basic server implementation could look like this:
 .. literalinclude:: example_server.py
    :language: python
 
-Which could then be run like so:
+Which can then be run like so:
 
 .. code-block:: shell
 
