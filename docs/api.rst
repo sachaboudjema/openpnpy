@@ -1,16 +1,16 @@
 API Reference
 =============
 
-openpnpy.messages module
-------------------------
+openpnpy.messages
+-----------------
 
 .. automodule:: openpnpy.messages
    :members:
    :undoc-members:
    :show-inheritance:
 
-openpnpy.server module
-----------------------
+openpnpy.server
+---------------
 
 .. automodule:: openpnpy.server
    :members:

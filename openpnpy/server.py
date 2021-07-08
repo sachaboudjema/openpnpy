@@ -8,12 +8,10 @@ class PnpServer:
     This class should be derived and handler methods overloaded in to implement
     behavior.
 
-    seealso:: See https://flask.palletsprojects.com/en/2.0.x/api/#application-object
-        for possible constructor params
+    See https://flask.palletsprojects.com/en/2.0.x/api/#application-object
+        for supported constructor params
     """
     def __init__(self, *args, **kwargs):
-        """Constructor method
-        """
         self.app = Flask(*args, **kwargs)
         self.app.add_url_rule('/pnp/HELLO', 'hello', self.handle_hello)
         self.app.add_url_rule(
@@ -30,8 +28,8 @@ class PnpServer:
     def run(self, *args, **kwargs):
         """Runs the Flask development server.
 
-        seealso:: See https://flask.palletsprojects.com/en/2.0.x/api/#flask.Flask.run
-            for possible params
+        See https://flask.palletsprojects.com/en/2.0.x/api/#flask.Flask.run
+            for supported params
         """
         self.app.run(*args, **kwargs)
 
@@ -50,11 +48,10 @@ class PnpServer:
 
         :param work_request: Work request sent by the PnP qgent
         :type work_request: openpnpy.server.PnpMessage
-        :return: Body element to be used in the repsonse message
+        :return: Body element to be used in the repsonse message, as can be built 
+            using the :py:mod:`openpnpy.messages` module
         :rtype: xml.etree.ElementTree.Element
         :raises NotImplementedError: To be implemented by user subclass
-
-        .. note:: The body element can be built using the :py:mod:`openpnpy.messages` module
         """
         raise NotImplementedError
 
@@ -63,11 +60,10 @@ class PnpServer:
 
         :param work_response: Work response sent by the PnP agent
         :type work_response: openpnpy.server.PnpMessage
-        :return: Body element to be used in the repsonse message
+        :return: Body element to be used in the repsonse message, as can be built 
+            using the :py:mod:`openpnpy.messages` module
         :rtype: xml.etree.ElementTree.Element
         :raises NotImplementedError: To be implemented by user subclass
-
-        .. note:: The body element can be built using the :py:mod:`openpnpy.messages` module
         """
         raise NotImplementedError
 
@@ -86,18 +82,19 @@ class PnpMessage:
 
     @classmethod
     def from_string(cls, xmlstring):
+        """Create an instance of PnpMessage from an XML string.
+        """
         return cls(ElementTree.fromstring(xmlstring))
 
     def make_response(self, element):
         """Builds a response to this message instance preserving session related 
         attributes.
 
-        :param element: Response message body
+        :param element: Response message body, as can be built using the 
+            :py:mod:`openpnpy.messages` module
         :type element: xml.etree.ElementTree.Element
         :return: New PnP message with given body
         :rtype: openpnpy.server.PnpMessage
-
-        note:: The body element can be built using the :py:mod:`openpnpy.messages` module
         """
         response = deepcopy(self)
         response.body = element
@@ -150,10 +147,9 @@ class PnpMessage:
         """Replaces the message body.
         The message correlator is apended to the provided body element.
 
-        :param element: Body element to be replaced with
+        :param element: Body element to be replaced with, as can be built using 
+            the :py:mod:`openpnpy.messages` module
         :type element: xml.etree.ElementTree.Element
-        
-        note:: The body element can be built using the :py:mod:`openpnpy.messages` module
         """
         element.set('correlator', self.correlator)
         self.root[0] = element
@@ -177,6 +173,8 @@ class PnpMessage:
         return s
 
     def to_string(self):
+        """Returns the message as na XML string.
+        """
         return ElementTree.tostring(self.root)
 
 
