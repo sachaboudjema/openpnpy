@@ -1,3 +1,7 @@
+"""This module provides functions to build PnP messages to sent to the device's 
+PnP agent.
+The functions only build the message's body part, without a correlator attribute.
+"""
 from xml.etree import ElementTree
 from contextlib import contextmanager
 
