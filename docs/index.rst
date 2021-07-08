@@ -5,8 +5,7 @@ Welcome to OpenPnPy's documentation!
    :maxdepth: 3
    :caption: Contents:
 
-   api/server
-   api/messages
+   api/index
 
 Indices and tables
 ==================
