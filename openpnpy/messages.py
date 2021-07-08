@@ -54,6 +54,74 @@ def device_info(type='all'):
     return ctb.close()
 
 
+def config_upgrade(location, details='all', apply_to='startup', abort_on_fault=True,
+                   checksum='', reload=True, reload_reason='PnP config upgrade',
+                   reload_delay=0, reload_user='PnP Agent', reload_save=True):
+    """Download and update the configuration on the device with the specified 
+    configuration.
+
+    :param location: Config file url
+    :type location: str
+    :param details: Level of error details reported, can be 'biref', 'errors' or
+        'all', defaults to 'all'
+    :type details: str, optional
+    :param apply_to: Configuration to modified, can be 'startup', 'running' or 'AP', 
+        defaults to 'startup'
+    :type apply_to: str, optional
+    :param abort_on_fault: Wether the agent should abort execution when encountering 
+        a syntaxt error, defaults to True
+    :type abort_on_fault: bool, optional
+    :param checksum: Checksum to validate the config file, ignored if empty, 
+        defaults to ''
+    :type checksum: str, optional
+    :param reload: Wether the device should reload after the operation, defaults 
+        to True
+    :type reload: bool, optional
+    :param reload_reason: Reason for the device reload, defaults to 'PnP config 
+        upgrade'
+    :type reload_reason: str, optional
+    :param reload_delay: Time to wait (units unknown) before reloading the device, 
+        defaults to 0
+    :type reload_delay: int, optional
+    :param reload_user: User that initiated the reload, defaults to 'PnP Agent'
+    :type reload_user: str, optional
+    :param reload_save: Wether to save the config before reloading the device, 
+        defaults to True
+    :type reload_save: bool, optional
+    :return: XML element to be used as a PnP message body
+    :rtype: xml.etree.ElementTree.Element
+    """
+    ctb = ContextualTreeBuilder()
+    with ctb.start('{urn:cisco:pnp:config-upgrade}request'):
+        with ctb.start('config', {'details': details}):
+            with ctb.start('copy'):
+                with ctb.start('source'):
+                    with ctb.start('location'):
+                        ctb.data(location)
+                    if checksum:
+                        with ctb.start('checksum'):
+                            ctb.data(checksum)
+                with ctb.start('applyTo'):
+                    ctb.data(apply_to)
+        if reload:
+            with ctb.start('reload'):
+                with ctb.start('reason'):
+                    ctb.data(reload_reason)
+                with ctb.start('delayIn'):
+                    ctb.data(str(reload_delay))
+                with ctb.start('user'):
+                    ctb.data(reload_user)
+                with ctb.start('saveConfig'):
+                    ctb.data(str(int(reload_save)))
+        else:
+            with ctb.start('noReload'):
+                pass
+        if abort_on_fault:
+            with ctb.start('abortOnSyntaxFault'):
+                pass
+    return ctb.close()
+
+
 def bye():
     """Acknowledge the receipt of PnP response and signal the end of the transaction.
     This is applicable only when the transport protocol is HTTP and HTTPS.
