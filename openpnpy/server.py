@@ -4,7 +4,7 @@ from copy import deepcopy
 
 
 class PnpServer:
-    """Wrapper for of a Flask server implementing PnP protocol endpoints.
+    """Wrapper for a Flask server implementing PnP protocol endpoints.
     This class should be derived and handler methods overloaded in to implement
     behavior.
 
@@ -54,7 +54,7 @@ class PnpServer:
         :rtype: xml.etree.ElementTree.Element
         :raises NotImplementedError: To be implemented by user subclass
 
-        note:: The body element can be built using the openpnpy.messages module
+        .. note:: The body element can be built using the :py:mod:`openpnpy.messages` module
         """
         raise NotImplementedError
 
@@ -67,7 +67,7 @@ class PnpServer:
         :rtype: xml.etree.ElementTree.Element
         :raises NotImplementedError: To be implemented by user subclass
 
-        note:: The body element can be built using the openpnpy.messages module
+        .. note:: The body element can be built using the :py:mod:`openpnpy.messages` module
         """
         raise NotImplementedError
 
@@ -97,7 +97,7 @@ class PnpMessage:
         :return: New PnP message with given body
         :rtype: openpnpy.server.PnpMessage
 
-        note:: The body element can be built using the openpnpy.messages module
+        note:: The body element can be built using the :py:mod:`openpnpy.messages` module
         """
         response = deepcopy(self)
         response.body = element
@@ -153,7 +153,7 @@ class PnpMessage:
         :param element: Body element to be replaced with
         :type element: xml.etree.ElementTree.Element
         
-        note:: The body element can be built using the openpnpy.messages module
+        note:: The body element can be built using the :py:mod:`openpnpy.messages` module
         """
         element.set('correlator', self.correlator)
         self.root[0] = element
