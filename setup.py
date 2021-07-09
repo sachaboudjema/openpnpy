@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="openpnpy",
-    version="0.0.1-DEVEL",
+    version="0.0.1",
     install_requires=[
         'flask',
     ],
