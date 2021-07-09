@@ -4,6 +4,7 @@ The functions only build the message's body part, without a correlator attribute
 """
 from xml.etree import ElementTree
 from contextlib import contextmanager
+from collections import namedtuple
 
 
 __all__ = ['backoff', 'device_info', 'config_upgrade', 'cli_config']
@@ -230,12 +231,57 @@ def cli_config(commands, details='all', check=False, on_fail='continue', write=F
     return ctb.close()
 
 
-def cli_exec():
-    """Request to execute a exec level CLI.
-    
-    :raises NotImplementedError: Yet to be implemented
+def cli_exec(commands, details='all', max_wait=10, max_size=0, check=False):
+    """Request to execute an exec level CLI.
+
+    :param commands: [description]
+    :type commands: [type]
+    :param details: [description], defaults to 'all'
+    :type details: str, optional
+    :param max_wait: [description], defaults to 0
+    :type max_wait: int, optional
+    :param max_size: [description], defaults to 0
+    :type max_size: int, optional
+    :param check: [description], defaults to False
+    :type check: bool, optional
+    :raises NotImplementedError: [description]
+
+    .. note:: Return in XLM-PI format not supported
     """
-    raise NotImplementedError
+    Dialog = namedtuple(
+        'Dialog', ['expect', 'reply', 'match', 'case_sensitive', 'repeat'], 
+        defaults=['exact', True, 1]
+    )
+    ctb = ContextualTreeBuilder()
+    with ctb.start('{urn:cisco:pnp:cli-exec}request'):
+        if check:
+            with ctb.start('execTest', {'details': details}):
+                with ctb.start('exec-data'):
+                    with ctb.start('cli-exec-data'):
+                        for cmd in commands:
+                            if isinstance(cmd, str):
+                                with ctb.start('cmd'):
+                                    ctb.data(cmd)
+        else:
+            with ctb.start('execCLI', {
+                    'maxWait': f'PT{max_wait}S',
+                    'maxResponseSize': max_size
+                }):
+                for cmd in commands:
+                    if isinstance(cmd, str):
+                        with ctb.start('cmd'):
+                            ctb.data(cmd)
+                    else:
+                        dialog = Dialog(*cmd)
+                        with ctb.start('dialog', {'repeat': str(dialog.repeat)}):
+                            with ctb.start('expect', {
+                                    'match': dialog.match,
+                                    'caseSensitive': dialog.case_sensitive
+                                }):
+                                ctb.data(dialog.expect)
+                            with ctb.start('reply'):
+                                ctb.data(dialog.reply)
+    return ctb.close()
 
 
 def device_authentication():
