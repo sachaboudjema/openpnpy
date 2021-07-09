@@ -20,24 +20,50 @@ class ContextualTreeBuilder(ElementTree.TreeBuilder):
             super().end(tag)
 
 
-def backoff(seconds=0, reason='No Reason'):
+def backoff(hours=0, minutes=0, seconds=0, default_minutes=0, terminate=False, reason='No Reason'):
     """Inform the PnP agent to connect back after some time.
 
-    :param seconds: Seconds to wait before connecting back, defaults to 0
+    :param hours: Hours to wait before connecting back (0 to 47), defaults to 0
+    :type hours: int, optional
+    :param minutes: Minutes to wait before connecting back (0 to 59), defaults to 0
+    :type minutes: int, optional
+    :param seconds: Seconds to wait before connecting back  (0 to 59), defaults to 0
     :type seconds: int, optional
+    :param default_minutes: Change default backoff timer to this value (1 to 2880), 
+        defaults to 0
+    :type default_minutes: int, optional
+    :param terminate: Ask agent to not connect to server ever again and remove 
+        any PnP profile/configuration., defaults to False
+    :type terminate: bool, optional
     :param reason: Reason of the backoff request, defaults to 'No Reason'
     :type reason: str, optional
     :return: XML element to be used as a PnP message body
     :rtype: xml.etree.ElementTree.Element
     """
+    if not (hours or minutes or seconds or default_minutes or terminate):
+        raise ValueError('Either timer, default timer or terminate must be specified')
     ctb = ContextualTreeBuilder()
     with ctb.start('{urn:cisco:pnp:backoff}request'):
         with ctb.start('backoff'):
             with ctb.start('reason'):
                 ctb.data(reason)
-            with ctb.start('callBackAfter'):
-                with ctb.start('seconds'):
-                    ctb.data(str(seconds))
+            if terminate:
+                with ctb.start('terminate'):
+                    pass
+            elif default_minutes:
+                with ctb.start('defaultMinutes'):
+                    ctb.data(str(default_minutes))
+            elif hours or minutes or seconds:
+                with ctb.start('callBackAfter'):
+                    if hours:
+                        with ctb.start('hours'):
+                            ctb.data(str(hours))
+                    if minutes:
+                        with ctb.start('minutes'):
+                            ctb.data(str(minutes))
+                    if seconds:
+                        with ctb.start('seconds'):
+                            ctb.data(str(seconds))
     return ctb.close()
 
 
