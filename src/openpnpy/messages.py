@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from collections import namedtuple
 
 
-__all__ = ['backoff', 'device_info', 'config_upgrade', 'cli_config']
+__all__ = ['backoff', 'device_info', 'config_upgrade', 'bye', 'cli_config', 'raises']
 
 
 class ContextualTreeBuilder(ElementTree.TreeBuilder):
@@ -41,9 +41,9 @@ def backoff(hours=0, minutes=0, seconds=0, default_minutes=0, terminate=False, r
     :return: XML element to be used as a PnP message body
     :rtype: xml.etree.ElementTree.Element
     :raises ValueError: If neither timer, default timer or terminate is specified
+
+    .. note:: Timer values, default timer and terminate are mutualy exclusive
     """
-    if not (hours or minutes or seconds or default_minutes or terminate):
-        raise ValueError('Either timer, default timer or terminate must be specified')
     ctb = ContextualTreeBuilder()
     with ctb.start('{urn:cisco:pnp:backoff}request'):
         with ctb.start('backoff'):

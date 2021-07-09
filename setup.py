@@ -24,7 +24,7 @@ setuptools.setup(
         "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
         "Operating System :: OS Independent",
     ],
-    package_dir={"": "."},
-    packages=setuptools.find_packages(where="."),
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src"),
     python_requires=">=3.7",
 )
