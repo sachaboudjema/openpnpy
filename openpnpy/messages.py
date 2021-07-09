@@ -6,7 +6,7 @@ from xml.etree import ElementTree
 from contextlib import contextmanager
 
 
-__all__ = ['backoff', 'device_info', 'config_upgrade']
+__all__ = ['backoff', 'device_info', 'config_upgrade', 'cli_config']
 
 
 class ContextualTreeBuilder(ElementTree.TreeBuilder):
@@ -39,6 +39,7 @@ def backoff(hours=0, minutes=0, seconds=0, default_minutes=0, terminate=False, r
     :type reason: str, optional
     :return: XML element to be used as a PnP message body
     :rtype: xml.etree.ElementTree.Element
+    :raises ValueError: If neither timer, default timer or terminate is specified
     """
     if not (hours or minutes or seconds or default_minutes or terminate):
         raise ValueError('Either timer, default timer or terminate must be specified')
@@ -184,12 +185,49 @@ def certificate_install():
     raise NotImplementedError
 
 
-def cli_config():
+def cli_config(commands, details='all', check=False, on_fail='continue', write=False):
     """Request to execute a configuration CLI.
-    
-    :raises NotImplementedError: Yet to be implemented
+
+    :param commands: List of commands to be executed
+    :type commands: list
+    :param details: Level of error details reported, can be 'biref', 'errors' or
+        'all', defaults to 'all'
+    :type details: str, optional
+    :param check: Do syntax-check only without applying the config change , defaults 
+        to False
+    :type check: bool, optional
+    :param on_fail: Action to take if a configuration command fails - 'continue' i.e. 
+        configure all commands in the request recording status of each command 
+        - 'stop' i.e. stop configuring on first failure - 'rollback' i.e. stop 
+        configuring at the first error and restore configuration to the state 
+        before any configuration was applied (this is only enabled if the archive 
+        Cisco IOS CLI is configured0, defaults to 'continue'
+    :type on_fail: str, optional
+    :param write: Save running config to startup config, defaults to False
+    :type write: bool, optional
+    :return: XML element to be used as a PnP message body
+    :rtype: xml.etree.ElementTree.Element
+
+    .. note:: Extended non-IOS config service not supported
+    .. note:: CLI data block not supported
+    .. note:: XML data config not supported
     """
-    raise NotImplementedError
+    if check:
+        config_type = 'configTest', {'details': details}
+    else:
+        config_type = 'configApply', {'details': details, 'action-on-fail': on_fail}
+    ctb = ContextualTreeBuilder()
+    with ctb.start('{urn:cisco:pnp:cli-config}request'):
+        with ctb.start(*config_type):
+            with ctb.start('config-data'):
+                with ctb.start('cli-config-data'):
+                    for cmd in commands:
+                        with ctb.start('cmd'):
+                            ctb.data(cmd)
+        if write and not check:
+            with ctb.start('configPersist'):
+                pass
+    return ctb.close()
 
 
 def cli_exec():
