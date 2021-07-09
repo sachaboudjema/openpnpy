@@ -82,7 +82,7 @@ class PnpMessage:
         self.root = element
 
     def __repr__(self):
-        return '<PnpMessage {}>'.format(self.body.tag)
+        return '<PnpMessage {} at {}>'.format(self.body.tag, id(self))
 
     @classmethod
     def from_string(cls, xmlstring):
