@@ -24,14 +24,23 @@ class PnpServer:
         self.app.add_url_rule('/pnp/HELLO', 'hello', self.handle_hello)
         self.app.add_url_rule(
             '/pnp/WORK-REQUEST', 'work_request',
-            PnpResponse(self.handle_work_request),
+            self.reply(self.handle_work_request),
             methods=['POST']
         )
         self.app.add_url_rule(
             '/pnp/WORK-RESPONSE', 'work_response',
-            PnpResponse(self.handle_work_response),
+            self.reply(self.handle_work_response),
             methods=['POST']
         )
+
+    def reply(self, handler):
+        """Decorator to create responses to the PnP request currently held in the
+        global request object, using the body returned by the handler method."""
+        def inner():
+            agent_request = PnpMessage.from_string(request.get_data())
+            server_response = agent_request.make_response(handler(agent_request))
+            return server_response.to_string(), 200
+        return inner
 
     def run(self, *args, **kwargs):
         """Runs the Flask development server.
@@ -53,7 +62,7 @@ class PnpServer:
     def handle_work_request(self, work_request):
         """What to do when a PnP agent sends a work request.
 
-        :param work_request: Work request sent by the PnP qgent
+        :param work_request: Work request sent by the PnP agent
         :type work_request: openpnpy.server.PnpMessage
         :return: Body element to be used in the repsonse message, as can be built 
             using the :py:mod:`openpnpy.messages` module
@@ -183,31 +192,6 @@ class PnpMessage:
         """Returns the message as na XML string.
         """
         return ElementTree.tostring(self.root)
-
-
-class PnpResponse:
-    """Decorator to create responses to the PnP request currently held by Flask's
-    global request object.
-
-    :param handler: function returning a PnP message body, as can be built using 
-    the :py:mod:`openpnpy.messages` module
-    :type handler: callable
-    """
-    def __init__(self, handler):
-        self.handler = handler
-
-    def __call__(self, *args):
-        """Gets the reponse message body by calling the handler function and 
-        creates a proper PnP XML message with udi and correlaotr mathcing the PnP
-        request.
-
-        :return: HTTP response tuple composed of the PnP reponse message and 200
-            status code
-        :rtype: tuple
-        """
-        agent_request = PnpMessage.from_string(request.get_data())
-        server_response = agent_request.make_response(self.handler(agent_request))
-        return server_response.to_string(), 200
 
 
 def udi_to_dict(udi):
