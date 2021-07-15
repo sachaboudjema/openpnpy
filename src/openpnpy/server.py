@@ -1,9 +1,12 @@
 """This module provides a base server class to be derived and implemented 
 according to the user's needs.
 """
+import re
 from flask import Flask, Response, request
 from xml.etree import ElementTree
 from copy import deepcopy
+
+from openpnpy.messages import device_info
 
 
 __all__ = ['PnpServer']
@@ -205,3 +208,102 @@ class PnpResponse:
         agent_request = PnpMessage.from_string(request.get_data())
         server_response = agent_request.make_response(self.handler(agent_request))
         return server_response.to_string(), 200
+
+
+def udi_to_dict(udi):
+    '''Parse udi string to dict'''
+    m = re.match(r'PID:(?P<PID>.+),VID:(?P<VID>.+),SN:(?P<SN>.+)', udi)
+    return m.groupdict()
+
+
+class PnpDeviceInfo(PnpMessage):
+
+    def to_dict(self):
+        info = udi_to_dict(self.udi)
+        response = self.root.find('{*}response')
+        udi = response.find('{*}udi')
+        image_info = response.find('{*}imageInfo')
+        hw_info = response.find('{*}hardwareInfo')
+        profile_info = response.find('{*}profileInfo')
+        file_systems =  response.find('{*}fileSystemList')
+        if file_systems:
+            info['fileSystemList'] = list()
+            for fs in file_systems:
+                info['fileSystemList'].append({
+                    'name': fs.get('name'),
+                    'type': fs.get('type'),
+                    'writable': fs.get('writable'),
+                    'readable': fs.get('readable'),
+                    'size': fs.get('size'),
+                    'freespace': fs.get('freespace'),
+                })
+        if udi:
+            info['primary-chassis'] = udi_to_dict(udi.find('{*}primary-chassis').text)  
+            ha = udi.find('{*}ha-device')
+            stack = udi.find('{*}stacked-switch')
+            if stack:
+                info['stacked-switch'] = list()
+                for member in stack:
+                    info['stacked-switch'].append({
+                        'slot': member.get('slot'),
+                        **udi_to_dict(member.text)
+                    })
+            if ha:
+                info['ha-device'] = list()
+                for standby in ha:
+                    info['ha-device'].append(udi_to_dict(standby.text))
+        if hw_info:
+            info['hostname'] = hw_info.find('{*}hostname').text
+            info['vendor'] = hw_info.find('{*}vendor').text
+            info['platformName'] = hw_info.find('{*}platformName').text
+            info['processorType'] = hw_info.find('{*}processorType').text
+            info['hwRevision'] = hw_info.find('{*}hwRevision').text
+            info['mainMemSize'] = hw_info.find('{*}mainMemSize').text
+            info['ioMemSize'] = hw_info.find('{*}ioMemSize').text
+            info['boardId'] = hw_info.find('{*}boardId').text
+            info['boardReworkId'] = hw_info.find('{*}boardReworkId').text
+            info['processorRev'] = hw_info.find('{*}processorRev').text
+            info['midplaneVersion'] = hw_info.find('{*}midplaneVersion').text
+            info['location'] = hw_info.find('{*}location').text
+        if image_info:
+            info['versionString'] = image_info.find('{*}versionString').text
+            info['imageFile'] = image_info.find('{*}imageFile').text
+            info['imageHash'] = image_info.find('{*}imageHash').text
+            info['returnToRomReason'] = image_info.find('{*}returnToRomReason').text
+            info['bootVariable'] = image_info.find('{*}bootVariable').text
+            info['bootLdrVariable'] = image_info.find('{*}bootLdrVariable').text
+            info['configVariable'] = image_info.find('{*}configVariable').text
+            info['configReg'] = image_info.find('{*}configReg').text
+            info['configRegNext'] = image_info.find('{*}configRegNext').text
+        if profile_info:
+            info['profileInfo'] = list()
+            for profile in profile_info:
+                primary_server = profile.find('{*}primary-server') 
+                backup_server = profile.find('{*}backup-server')
+                p = {
+                    'profile-name': profile.get('profile-name'),
+                    'discovery-created': profile.get('discovery-created'),
+                    'created-by': profile.get('created-by'),
+                }
+                ps = {
+                    'protocol': primary_server.find('{*}protocol').text,
+                }
+                for e in primary_server.find('{*}server-address').iter():
+                    if 'port' in e.tag:
+                        ps.update({'port': e.text})
+                    else:
+                        ps.update({'server-address': e.text})
+                        ps.update({'server-address-type': e.tag})
+                p.update({'primary-server': ps})
+                if backup_server:
+                    bs = {
+                        'protocol': backup_server.find('{*}protocol').text,
+                    }
+                    for e in backup_server.find('{*}server-address').iter():
+                        if 'port' in e.tag:
+                            bs.update({'port': e.text})
+                        else:
+                            bs.update({'server-address': e.text})
+                    p.update({'backup-server': bs})
+                info['profileInfo'].append(p)
+        return info
