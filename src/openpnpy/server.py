@@ -34,11 +34,11 @@ class PnpServer:
         )
 
     def reply(self, handler):
-        """Decorator to create responses to the PnP request currently held in the
+        """Decorator to create replies to the PnP request currently held in the
         global request object, using the body returned by the handler method."""
         def inner():
             agent_request = PnpMessage.from_string(request.get_data())
-            server_response = agent_request.make_response(handler(agent_request))
+            server_response = agent_request.make_reply(handler(agent_request))
             return server_response.to_string(), 200
         return inner
 
@@ -102,7 +102,7 @@ class PnpMessage:
         """
         return cls(ElementTree.fromstring(xmlstring))
 
-    def make_response(self, element):
+    def make_reply(self, element):
         """Builds a response to this message instance preserving session related 
         attributes.
 
