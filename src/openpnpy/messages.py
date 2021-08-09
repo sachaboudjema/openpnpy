@@ -1,357 +1,229 @@
-"""This module provides functions to build PnP messages to sent to the device's 
-PnP agent.
-The functions only build the message's body part, without a correlator attribute.
-"""
+import re
 from xml.etree import ElementTree
-from contextlib import contextmanager
-from collections import namedtuple
+from copy import deepcopy
 
 
-__all__ = ['backoff', 'device_info', 'config_upgrade', 'bye', 'cli_config', 'raises']
+__all__ = ['PnpMessage']
 
 
-class ContextualTreeBuilder(ElementTree.TreeBuilder):
-    """Convinience class to allow using contexts with TreeBuilder.
+class PnpMessage:
+    """PnP protocol XML message
+
+    :param element: XML parsed message element 
+    :type element: xml.etree.ElementTree.Element
     """
-    @contextmanager
-    def start(self, tag, attrib={}):
-        try:
-            yield super().start(tag, attrib)
-        finally:
-            super().end(tag)
+    def __init__(self, element):
+        self.root = element
 
+    def __repr__(self):
+        return '<PnpMessage {} at {}>'.format(self.body.tag, id(self))
 
-def backoff(hours=0, minutes=0, seconds=0, default_minutes=0, terminate=False, reason='No Reason'):
-    """Inform the PnP agent to connect back after some time.
+    def __str__(self):
+        return f"{self.correlator} {self.udi} {self.body.tag} success={self.success}"
 
-    :param hours: Hours to wait before connecting back (0 to 47), defaults to 0
-    :type hours: int, optional
-    :param minutes: Minutes to wait before connecting back (0 to 59), defaults to 0
-    :type minutes: int, optional
-    :param seconds: Seconds to wait before connecting back  (0 to 59), defaults to 0
-    :type seconds: int, optional
-    :param default_minutes: Change default backoff timer to this value (1 to 2880), 
-        defaults to 0
-    :type default_minutes: int, optional
-    :param terminate: Ask agent to not connect to server ever again and remove 
-        any PnP profile/configuration., defaults to False
-    :type terminate: bool, optional
-    :param reason: Reason of the backoff request, defaults to 'No Reason'
-    :type reason: str, optional
-    :return: XML element to be used as a PnP message body
-    :rtype: xml.etree.ElementTree.Element
-    :raises ValueError: If neither timer, default timer or terminate is specified
+    @classmethod
+    def from_string(cls, xmlstring):
+        """Create an instance of PnpMessage from an XML string.
+        """
+        return cls(ElementTree.fromstring(xmlstring))
 
-    .. note:: Timer values, default timer and terminate are mutualy exclusive
-    """
-    ctb = ContextualTreeBuilder()
-    with ctb.start('{urn:cisco:pnp:backoff}request'):
-        with ctb.start('backoff'):
-            with ctb.start('reason'):
-                ctb.data(reason)
-            if terminate:
-                with ctb.start('terminate'):
-                    pass
-            elif default_minutes:
-                with ctb.start('defaultMinutes'):
-                    ctb.data(str(default_minutes))
-            elif hours or minutes or seconds:
-                with ctb.start('callBackAfter'):
-                    if hours:
-                        with ctb.start('hours'):
-                            ctb.data(str(hours))
-                    if minutes:
-                        with ctb.start('minutes'):
-                            ctb.data(str(minutes))
-                    if seconds:
-                        with ctb.start('seconds'):
-                            ctb.data(str(seconds))
-    return ctb.close()
+    def make_reply(self, element):
+        """Builds a response to this message instance preserving session related 
+        attributes.
 
+        :param element: Response message body, as can be built using the 
+            :py:mod:`openpnpy.services` module
+        :type element: xml.etree.ElementTree.Element
+        :return: New PnP message with given body
+        :rtype: openpnpy.server.PnpMessage
+        """
+        response = deepcopy(self)
+        response.body = element
+        return response
 
-def device_info(type='all'):
-    """Request to obtain device’s profile which includes device UDI, filesytem, 
-    hardware info and etc.
+    @property
+    def udi(self):
+        """Unique Device Identifier. 
+        A built in device id consisting of product id, version id, and the serial
+        number. It is mandatory for all the messages that get exchanged between 
+        the PnP agent and the PnP server.
+        """
+        return self.root.get('udi')
 
-    :param type: Info sections to be sent, can be 'image', 'hardware', 'filesystem', 
-        'udi', 'profile' or 'all', defaults to 'all'
-    :type type: str, optional
-    :return: XML element to be used as a PnP message body
-    :rtype: xml.etree.ElementTree.Element
-    """
-    ctb = ContextualTreeBuilder()
-    with ctb.start('{urn:cisco:pnp:device-info}request'):
-        with ctb.start('deviceInfo', {'type': type}):
-            pass
-    return ctb.close()
+    @property
+    def username(self):
+        """Login username for the device.
+        Applicable for all the messages that are sent from the PnP server to the 
+        agent. The only exception is the initial exchange when there is no configuration 
+        present on the new device.
+        """
+        self.root.get('username')
 
-
-def config_upgrade(location, details='all', apply_to='startup', abort_on_fault=True,
-                   checksum='', reload=True, reload_reason='PnP config upgrade',
-                   reload_delay=0, reload_user='PnP Agent', reload_save=True):
-    """Download and update the configuration on the device with the specified 
-    configuration.
-
-    :param location: Config file url
-    :type location: str
-    :param details: Level of error details reported, can be 'biref', 'errors' or
-        'all', defaults to 'all'
-    :type details: str, optional
-    :param apply_to: Configuration to modified, can be 'startup', 'running' or 'AP', 
-        defaults to 'startup'
-    :type apply_to: str, optional
-    :param abort_on_fault: Wether the agent should abort execution when encountering 
-        a syntaxt error, defaults to True
-    :type abort_on_fault: bool, optional
-    :param checksum: Checksum to validate the config file, ignored if empty, 
-        defaults to ''
-    :type checksum: str, optional
-    :param reload: Wether the device should reload after the operation, defaults 
-        to True
-    :type reload: bool, optional
-    :param reload_reason: Reason for the device reload, defaults to 'PnP config 
-        upgrade'
-    :type reload_reason: str, optional
-    :param reload_delay: Time to wait (units unknown) before reloading the device, 
-        defaults to 0
-    :type reload_delay: int, optional
-    :param reload_user: User that initiated the reload, defaults to 'PnP Agent'
-    :type reload_user: str, optional
-    :param reload_save: Wether to save the config before reloading the device, 
-        defaults to True
-    :type reload_save: bool, optional
-    :return: XML element to be used as a PnP message body
-    :rtype: xml.etree.ElementTree.Element
-    """
-    ctb = ContextualTreeBuilder()
-    with ctb.start('{urn:cisco:pnp:config-upgrade}request'):
-        with ctb.start('config', {'details': details}):
-            with ctb.start('copy'):
-                with ctb.start('source'):
-                    with ctb.start('location'):
-                        ctb.data(location)
-                    if checksum:
-                        with ctb.start('checksum'):
-                            ctb.data(checksum)
-                with ctb.start('applyTo'):
-                    ctb.data(apply_to)
-        if reload:
-            with ctb.start('reload'):
-                with ctb.start('reason'):
-                    ctb.data(reload_reason)
-                with ctb.start('delayIn'):
-                    ctb.data(str(reload_delay))
-                with ctb.start('user'):
-                    ctb.data(reload_user)
-                with ctb.start('saveConfig'):
-                    ctb.data(str(int(reload_save)))
-        else:
-            with ctb.start('noReload'):
-                pass
-        if abort_on_fault:
-            with ctb.start('abortOnSyntaxFault'):
-                pass
-    return ctb.close()
-
-
-def bye():
-    """Acknowledge the receipt of PnP response and signal the end of the transaction.
-    This is applicable only when the transport protocol is HTTP and HTTPS.
-
-    :return: XML element to be used as a PnP message body
-    :rtype: xml.etree.ElementTree.Element
-    """
-    ctb = ContextualTreeBuilder()
-    with ctb.start('{urn:cisco:pnp:work-info}info'):
-        with ctb.start('workInfo'):
-            with ctb.start('bye'):
-                pass
-    return ctb.close()
-
-
-def capability():
-    """Request to query what services are supported by the agent.
+    @username.setter
+    def username(self, value):
+        self.root.set('username', value)
     
-    :raises NotImplementedError: Yet to be implemented
+    @property
+    def password(self):
+        """Login password for the device.
+        Applicable for all the messages that are sent from the PnP server to the 
+        agent. The only exception is the initial exchange when there is no configuration 
+        present on the new device.
+        """
+        self.root.get('password')
+
+    @password.setter
+    def password(self, value):
+        self.root.set('password', value)
+
+    @property
+    def body(self):
+        """Body of the PnP message.
+        Can be one of info or request or response messages for various PnP services.
+        """
+        return self.root[0]
+
+    @body.setter
+    def body(self, element):
+        """Replaces the message body.
+        The message correlator is apended to the provided body element.
+
+        :param element: Body element to be replaced with, as can be built using 
+            the :py:mod:`openpnpy.services` module
+        :type element: xml.etree.ElementTree.Element
+        """
+        element.set('correlator', self.correlator)
+        self.root[0] = element
+
+    @property
+    def correlator(self):
+        """A unique string to match requests and responses between agent and server.
+        """
+        return self.body.get('correlator')
+
+    @property
+    def success(self):
+        """Success state of the last executed work request.
+
+        :return: Success state, None if the message is not a work response
+        :rtype: bool, None
+        """
+        s = self.body.get('success')
+        if s is not None:
+            return bool(int(s))
+        return s
+
+    def to_string(self):
+        """Returns the message as an XML string.
+        """
+        return ElementTree.tostring(self.root)
+
+
+def udi_to_dict(udi):
+    """Parses a UDI string to an equivalent dictionnary
+
+    :param udi: UDI string as found in a PnP message header element
+    :type udi: str
+    :return: UDI dict
+    :rtype: dict
     """
-    raise NotImplementedError
+    m = re.match(r'PID:(?P<PID>.+),VID:(?P<VID>.+),SN:(?P<SN>.+)', udi)
+    return m.groupdict()
 
 
-def certificate_install():
-    """Request the agent to install a trustpoint or trustpool certificate into 
-    the devices.
-    
-    :raises NotImplementedError: Yet to be implemented
+def device_info_dict(device_info):
+    """Parses an XML Device Info reponse to an equivalent dictionnary
+
+    :param device_info: Agent response message to a device_info service request
+    :type device_info: PnpMessage
+    :return: Dictionnary of the device info
+    :rtype: dict
     """
-    raise NotImplementedError
-
-
-def cli_config(commands, details='all', check=False, on_fail='continue', write=False):
-    """Request to execute a configuration CLI.
-
-    :param commands: List of commands to be executed
-    :type commands: list
-    :param details: Level of error details reported, can be 'biref', 'errors' or
-        'all', defaults to 'all'
-    :type details: str, optional
-    :param check: Do syntax-check only without applying the config change , defaults 
-        to False
-    :type check: bool, optional
-    :param on_fail: Action to take if a configuration command fails - 'continue' i.e. 
-        configure all commands in the request recording status of each command 
-        - 'stop' i.e. stop configuring on first failure - 'rollback' i.e. stop 
-        configuring at the first error and restore configuration to the state 
-        before any configuration was applied (this is only enabled if the archive 
-        Cisco IOS CLI is configured0, defaults to 'continue'
-    :type on_fail: str, optional
-    :param write: Save running config to startup config, defaults to False
-    :type write: bool, optional
-    :return: XML element to be used as a PnP message body
-    :rtype: xml.etree.ElementTree.Element
-
-    .. note:: Extended non-IOS config service not supported
-    .. note:: CLI data block not supported
-    .. note:: XML data config not supported
-    """
-    if check:
-        config_type = 'configTest', {'details': details}
-    else:
-        config_type = 'configApply', {'details': details, 'action-on-fail': on_fail}
-    ctb = ContextualTreeBuilder()
-    with ctb.start('{urn:cisco:pnp:cli-config}request'):
-        with ctb.start(*config_type):
-            with ctb.start('config-data'):
-                with ctb.start('cli-config-data'):
-                    for cmd in commands:
-                        with ctb.start('cmd'):
-                            ctb.data(cmd)
-        if write and not check:
-            with ctb.start('configPersist'):
-                pass
-    return ctb.close()
-
-
-def cli_exec(commands, details='all', max_wait=10, max_size=0, check=False):
-    """Request to execute an exec level CLI.
-
-    :param commands: [description]
-    :type commands: [type]
-    :param details: [description], defaults to 'all'
-    :type details: str, optional
-    :param max_wait: [description], defaults to 0
-    :type max_wait: int, optional
-    :param max_size: [description], defaults to 0
-    :type max_size: int, optional
-    :param check: [description], defaults to False
-    :type check: bool, optional
-    :raises NotImplementedError: [description]
-
-    .. note:: Return in XLM-PI format not supported
-    """
-    Dialog = namedtuple(
-        'Dialog', ['expect', 'reply', 'match', 'case_sensitive', 'repeat'], 
-        defaults=['exact', True, 1]
-    )
-    ctb = ContextualTreeBuilder()
-    with ctb.start('{urn:cisco:pnp:cli-exec}request'):
-        if check:
-            with ctb.start('execTest', {'details': details}):
-                with ctb.start('exec-data'):
-                    with ctb.start('cli-exec-data'):
-                        for cmd in commands:
-                            if isinstance(cmd, str):
-                                with ctb.start('cmd'):
-                                    ctb.data(cmd)
-        else:
-            with ctb.start('execCLI', {
-                    'maxWait': f'PT{max_wait}S',
-                    'maxResponseSize': max_size
-                }):
-                for cmd in commands:
-                    if isinstance(cmd, str):
-                        with ctb.start('cmd'):
-                            ctb.data(cmd)
+    info = udi_to_dict(device_info.udi)
+    response = device_info.root.find('{*}response')
+    udi = response.find('{*}udi')
+    image_info = response.find('{*}imageInfo')
+    hw_info = response.find('{*}hardwareInfo')
+    profile_info = response.find('{*}profileInfo')
+    file_systems =  response.find('{*}fileSystemList')
+    if file_systems:
+        info['fileSystemList'] = list()
+        for fs in file_systems:
+            info['fileSystemList'].append({
+                'name': fs.get('name'),
+                'type': fs.get('type'),
+                'writable': fs.get('writable'),
+                'readable': fs.get('readable'),
+                'size': fs.get('size'),
+                'freespace': fs.get('freespace'),
+            })
+    if udi:
+        info['primary-chassis'] = udi_to_dict(udi.find('{*}primary-chassis').text)  
+        ha = udi.find('{*}ha-device')
+        stack = udi.find('{*}stacked-switch')
+        if stack:
+            info['stacked-switch'] = list()
+            for member in stack:
+                info['stacked-switch'].append({
+                    'slot': member.get('slot'),
+                    **udi_to_dict(member.text)
+                })
+        if ha:
+            info['ha-device'] = list()
+            for standby in ha:
+                info['ha-device'].append(udi_to_dict(standby.text))
+    if hw_info:
+        info['hostname'] = hw_info.find('{*}hostname').text
+        info['vendor'] = hw_info.find('{*}vendor').text
+        info['platformName'] = hw_info.find('{*}platformName').text
+        info['processorType'] = hw_info.find('{*}processorType').text
+        info['hwRevision'] = hw_info.find('{*}hwRevision').text
+        info['mainMemSize'] = hw_info.find('{*}mainMemSize').text
+        info['ioMemSize'] = hw_info.find('{*}ioMemSize').text
+        info['boardId'] = hw_info.find('{*}boardId').text
+        info['boardReworkId'] = hw_info.find('{*}boardReworkId').text
+        info['processorRev'] = hw_info.find('{*}processorRev').text
+        info['midplaneVersion'] = hw_info.find('{*}midplaneVersion').text
+        info['location'] = hw_info.find('{*}location').text
+    if image_info:
+        info['versionString'] = image_info.find('{*}versionString').text
+        info['imageFile'] = image_info.find('{*}imageFile').text
+        info['imageHash'] = image_info.find('{*}imageHash').text
+        info['returnToRomReason'] = image_info.find('{*}returnToRomReason').text
+        info['bootVariable'] = image_info.find('{*}bootVariable').text
+        info['bootLdrVariable'] = image_info.find('{*}bootLdrVariable').text
+        info['configVariable'] = image_info.find('{*}configVariable').text
+        info['configReg'] = image_info.find('{*}configReg').text
+        info['configRegNext'] = image_info.find('{*}configRegNext').text
+    if profile_info:
+        info['profileInfo'] = list()
+        for profile in profile_info:
+            primary_server = profile.find('{*}primary-server') 
+            backup_server = profile.find('{*}backup-server')
+            p = {
+                'profile-name': profile.get('profile-name'),
+                'discovery-created': profile.get('discovery-created'),
+                'created-by': profile.get('created-by'),
+            }
+            ps = {
+                'protocol': primary_server.find('{*}protocol').text,
+            }
+            for e in primary_server.find('{*}server-address').iter():
+                if 'port' in e.tag:
+                    ps.update({'port': e.text})
+                else:
+                    ps.update({'server-address': e.text})
+                    ps.update({'server-address-type': e.tag})
+            p.update({'primary-server': ps})
+            if backup_server:
+                bs = {
+                    'protocol': backup_server.find('{*}protocol').text,
+                }
+                for e in backup_server.find('{*}server-address').iter():
+                    if 'port' in e.tag:
+                        bs.update({'port': e.text})
                     else:
-                        dialog = Dialog(*cmd)
-                        with ctb.start('dialog', {'repeat': str(dialog.repeat)}):
-                            with ctb.start('expect', {
-                                    'match': dialog.match,
-                                    'caseSensitive': dialog.case_sensitive
-                                }):
-                                ctb.data(dialog.expect)
-                            with ctb.start('reply'):
-                                ctb.data(dialog.reply)
-    return ctb.close()
-
-
-def device_authentication():
-    """Request to authenticate the device.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
-
-def file_transfer():
-    """Request to copy a file.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
-
-def image_install():
-    """Request the agent to install a new image.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
-
-def licensing():
-    """Request to install and configure new license.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
-
-def redirection():
-    """Request to redirect PnP Profile to use another PnP server.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
-
-def reload():
-    """Request the agent to reload.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
-
-def script():
-    """Request to execute a script.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
-
-def smu():
-    """Request to install a SMU.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
-
-def topology():
-    """Request topology of the device.
-    
-    :raises NotImplementedError: Yet to be implemented
-    """
-    raise NotImplementedError
-
+                        bs.update({'server-address': e.text})
+                p.update({'backup-server': bs})
+            info['profileInfo'].append(p)
+    return info
